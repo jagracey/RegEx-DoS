@@ -1,0 +1,33 @@
+{
+  "name": "redos",
+  "version": "1.0.0",
+  "description": ":cop: :punch: RegEx Denial of Service (ReDos) Scanner",
+  "main": "redos.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jagracey/Regex-DoS.git"
+  },
+  "keywords": [
+    "regex",
+    "dos",
+    "redos",
+    "regex",
+    "scan",
+    "node",
+    "nodejs"
+  ],
+  "author": "John Gracey",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jagracey/Regex-DoS/issues"
+  },
+  "homepage": "https://github.com/jagracey/Regex-DoS#readme",
+  "dependencies": {
+    "chalk": "^1.1.3",
+    "esprima": "^2.7.2",
+    "safe-regex": "^1.1.0"
+  }
+}
