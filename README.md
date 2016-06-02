@@ -1,4 +1,4 @@
-![](https://raw.githubusercontent.com/jagracey/Regex-DoS/a204c3d105f215309fee1da2eb035443f254059b/resources/Banner.jpg)
+![](https://raw.githubusercontent.com/jagracey/RegEx-DoS/master/resources/Banner.jpg)
 # :cop: :punch: RegEx Denial of Service (ReDos) Scanner
 
 *Please read the [contribution guidelines](CONTRIBUTING.md) before contributing.*
