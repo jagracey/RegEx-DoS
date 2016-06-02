@@ -15,7 +15,7 @@ function traverse(node, work) {
         let child = node[key];
         if (typeof child === 'object' && child !== null) {
           if (Array.isArray(child))
-            child.forEach(node => traverse(node, work); );
+            child.forEach(node => traverse(node, work) );
           else
             traverse(child, work);
         }
@@ -44,8 +44,17 @@ const parse = function(content, cb){
 
 
 const utility = {
-  rPad: function(str, n, char, max){ return str + Array( Math.max(n - str.length, 0)).slice(0,max).join(' '); },
-  lPad: function(str, n, char, max){ return       Array( Math.max(n - str.length, 0)).slice(0,max).join(' ') + str;}
+  rPad: function(str, n, char, max){
+    return str + Array( Math.max(n - str.length, 0)).slice(0,max).join(' ');
+  },
+  lPad: function(str, n, char, max){
+    return Array( Math.max(n - str.length, 0)).slice(0,max).join(' ') + str;
+  },
+  trimShebang: function(text) {
+    return text.toString().replace( /^#!([^\r\n]+)/ , function(_, captured) {
+      return "/* #!"+ captured +' */';
+    });
+  }
 };
 
 
@@ -95,14 +104,30 @@ const Node = function(node){
 
   // Do if running directly from CLI.
 if (require.main === module) {
-  const file    = process.argv[2];
-  const content = fs.readFileSync(file);
-  const rNodes = new RegexNodes();
 
-  parse(content, function(rNodes){
+  if (process.argv.length !== 3){
+    console.error('Redos CLI command requires a JavaScript filename as the only parameter.');
+    process.exit(1);
+  }
+
+  const regNodes = new RegexNodes();
+  const file    = process.argv[2];
+  let content;
+
+  try{
+    content = utility.trimShebang( fs.readFileSync(file) );
+  }
+  catch(e){
+    console.error('Redos encountered an error when trying to read from file: '+file);
+    console.error(e);
+    process.exit(1);
+  }
+  
+  parse(content, function(regNodes){
     console.log( chalk.blue('Processing:'), chalk.white(file));
-    rNodes.printAll();
+    regNodes.printAll();
   });
+
 }
 
 
