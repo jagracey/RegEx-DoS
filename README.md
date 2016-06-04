@@ -1,7 +1,11 @@
 ![](https://raw.githubusercontent.com/jagracey/RegEx-DoS/master/resources/Banner.jpg)
 # :cop: :punch: RegEx Denial of Service (ReDos) Scanner
-
+### Helping you find Regular Expressions susceptible to Denial of Service Attacks.
 *Please read the [contribution guidelines](CONTRIBUTING.md) before contributing.*
+
+<br><br>
+
+![](https://raw.githubusercontent.com/jagracey/RegEx-DoS/master/resources/screenshot.png)
 
 <br>
 
