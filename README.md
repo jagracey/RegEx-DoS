@@ -5,9 +5,45 @@
 
 <br><br>
 
+**A screenshot of ReDoS scanning in action.**
 ![](https://raw.githubusercontent.com/jagracey/RegEx-DoS/master/resources/screenshot.png)
 
+
+# What is Regular Expression Denial of Service?
+[Wikipedia](https://en.wikipedia.org/wiki/ReDoS) and [OSWAP](https://www.owasp.org/index.php/Regular_expression_Denial_of_Service_-_ReDoS) have decent explainations. Basically certain RegExes can take a long time for certain inputs. Here's a real example.
+
+```javascript
+>   console.time('benchmark');
+    /^(([a-z])+.)+[A-Z]([a-z])+$/.test('aaaaaaaaaaaaaaa');
+    console.timeEnd('benchmark');
+< benchmark: 0.060ms
+
+>   console.time('benchmark');
+    /^(([a-z])+.)+[A-Z]([a-z])+$/.test('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    console.timeEnd('benchmark');
+< benchmark: 308.656ms
+
+>   console.time('benchmark');
+    /^(([a-z])+.)+[A-Z]([a-z])+$/.test('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    console.timeEnd('benchmark');
+< benchmark: 3179.829ms
+
+
+>   console.time('benchmark');
+    /^(([a-z])+.)+[A-Z]([a-z])+$/.test('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    console.timeEnd('benchmark');
+< benchmark: 22159.769ms  // 22 seconds
+
+>   // You can guess what would happen if you test the RegEx with 100 repeating characters.
+    console.time('benchmark');
+    /^(([a-z])+.)+[A-Z]([a-z])+$/.test( 'a'.repeat(100) );
+    console.timeEnd('benchmark');
+< benchmark: lol.....no.
+
+```
+
 <br>
+# Installing ReDoS
 
 As usual, install with NPM.
 ```
@@ -43,11 +79,12 @@ redos( content ).results();
 ```
 
 
-<br><br>
+<br>
 
 # Tests
 *Coming Soon?*
 
+<br><br>
 
 # Contributing
 
