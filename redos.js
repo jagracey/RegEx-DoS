@@ -1,133 +1,160 @@
 #!/usr/bin/env node
-'use strict';
 
 
-const fs      = require('fs');
-const chalk   = require('chalk');
+const fs = require('fs');
+const chalk = require('chalk');
 const esprima = require('esprima');
-const safeReg    = require('safe-regex');
+const safeReg = require('safe-regex');
+
+
+const utility = {
+  rPad(str, n, char, max) {
+    return str + Array(Math.max(n - str.length, 0)).slice(0, max).join(' ');
+  },
+  lPad(str, n, char, max) {
+    return Array(Math.max(n - str.length, 0)).slice(0, max).join(' ') + str;
+  },
+  trimShebang(text) {
+    return text.toString().replace(/^#!([^\r\n]+)/, (_, captured) =>
+       `/* #!${captured} */`
+    );
+  },
+};
+
+
+function Node(pattern, loc) {
+  const safe = safeReg(pattern);
+  const color = safe ? chalk.green : chalk.red;
+
+  const colorPattern = color(pattern);
+  this.pattern = pattern;
+  this.data = { safe, pattern };
+
+  this.formatLine = function () {
+    const start = loc.start;
+    const end = loc.end;
+    return `Line[${start.line}:${start.column}->${end.line}:${end.column}]`;
+  };
+
+  this.toString = function () {
+    return `${chalk.gray(this.formatLine())}  ${colorPattern}`;
+  };
+  this.format = function () {
+    return `${chalk.gray(utility.lPad(this.formatLine(), 34))}  ${colorPattern}`;
+  };
+}
+
+
+function RegexNodes() {
+  const nodes = [];
+
+  this.get = i => nodes[i];
+  this.add = node => nodes.push(node);
+  this.results = () => nodes.map(n => n.data);
+
+  /* Not important. It simply gets the maximum string length of the pattern
+   * for formatting output. Not really used.
+   */
+  this.maxPatternLength = function () {
+    return nodes
+      .map(n => n.pattern.length)
+      .reduce((max, n) => Math.max(max, n), 0);
+  };
+  this.printAll = function () {
+    nodes
+      .map(n => n.format())
+      .forEach(str => console.log(str));
+  };
+}
 
 
 function traverse(node, work) {
   work(node);
-  for (let key in node) {
-    if (node.hasOwnProperty(key)) {
-        let child = node[key];
-        if (typeof child === 'object' && child !== null) {
-          if (Array.isArray(child))
-            child.forEach(node => traverse(node, work) );
-          else
-            traverse(child, work);
-        }
+  for (const key in node) {
+    if (!node.hasOwnProperty(key)) continue;
+    const child = node[key];
+    if (typeof child !== 'object' || child === null) continue;
+    if (Array.isArray(child)) {
+      child.forEach(item => traverse(item, work));
+    } else {
+      traverse(child, work);
     }
   }
 }
 
 
-const parse = function(content, cb){
+/* eslint-disable consistent-return*/
+function parse(content, cb) {
   const regexNodes = new RegexNodes();
-  const ast = esprima.parse( content, {
+  const ast = esprima.parse(content, {
     sourceType: 'module',
-    loc: true
+    loc: true,
   });
 
-  traverse( ast, function(node) {
-    if (node.regex && node.regex.pattern)
-      regexNodes.add( new Node(node) );
+  traverse(ast, (node) => {
+    if (node.regex && node.regex.pattern) {
+      regexNodes.add(new Node(node.regex.pattern, node.loc));
+    } else if (
+      node.type === 'CallExpression' &&
+      node.callee.type === 'MemberExpression' &&
+      node.callee.property.type === 'Identifier' &&
+      (
+        node.callee.property.name === 'match' ||
+        node.callee.property.name === 'search'
+      ) &&
+      node.arguments.length === 1 &&
+      node.arguments[0].type === 'Literal'
+    ) {
+      // Match function calls like foo.match("bar") or foo.search("bar")
+      const stringRegex = node.arguments[0];
+      regexNodes.add(new Node(stringRegex.value, stringRegex.loc));
+    } else if (
+      (
+        node.type === 'CallExpression' ||
+        node.type === 'NewExpression'
+      ) &&
+      node.callee.type === 'Identifier' &&
+      node.callee.name === 'RegExp' &&
+      node.arguments.length > 0 &&
+      node.arguments[0].type === 'Literal'
+    ) {
+      // Match RegExp("foo")
+      const stringRegex = node.arguments[0];
+      regexNodes.add(new Node(stringRegex.value, stringRegex.loc));
+    }
   });
 
-  if ( typeof cb === 'function')
+  if (typeof cb === 'function') {
     cb(regexNodes);
-  else
+  } else {
     return regexNodes;
-};
-
-
-const utility = {
-  rPad: function(str, n, char, max){
-    return str + Array( Math.max(n - str.length, 0)).slice(0,max).join(' ');
-  },
-  lPad: function(str, n, char, max){
-    return Array( Math.max(n - str.length, 0)).slice(0,max).join(' ') + str;
-  },
-  trimShebang: function(text) {
-    return text.toString().replace( /^#!([^\r\n]+)/ , function(_, captured) {
-      return "/* #!"+ captured +' */';
-    });
   }
-};
+}
+/* eslint-enable consistent-return*/
 
 
-const RegexNodes = function(){
-  const self = this;
-  const nodes = [];
-
-  this.get = i => nodes[i];
-  this.add = node => nodes.push(node);
-  this.results = () => nodes.map( n=>n.getData() );
-
-  // Not important, simply gets the max string lenght of the pattern for formatting output. not really used.
-  this.maxPatternLength = function(){
-    return nodes.reduce((max,n)=> Math.max(max,n.pattern().length), 0);
-  }
-  this.printAll = function(){
-    nodes.map(n=>console.log(n.format()) );
-  };
-};
-
-
-const Node = function(node){
-  // Since Nodes are static, there isn't too much of a point adding functions,
-  // but it does make formatting strings cleaner.
-  const safe  = safeReg(node.regex.pattern);
-  const color = safe ? chalk.green: chalk.red;
-  const pattern = node.regex.pattern; // Redundant, but cleaner...
-
-  const colorPattern = () => color(pattern);
-  this.pattern       = () => pattern;
-  this.getData       = () =>({ safe, pattern, loc: node.loc });
-
-  this.formatLine = function(){
-    const start = node.loc.start;
-    const end   = node.loc.end;
-    return 'Line[' + start.line +':'+ start.column +'->'+ end.line +':'+ end.column+']';
-  };
-
-  this.toString = function(){
-    return  chalk.gray( this.formatLine() ) +'  '+ colorPattern();
-  };
-  this.format = function(){
-    return  chalk.gray( utility.lPad( this.formatLine(),34) ) +'  '+ colorPattern();
-  }
-};
-
-
-  // Do if running directly from CLI.
+// Do if running directly from CLI.
 if (require.main === module) {
-
-  if (process.argv.length !== 3){
+  if (process.argv.length !== 3) {
     console.error('Redos CLI command requires a JavaScript filename as the only parameter.');
     process.exit(1);
   }
 
-  const regNodes = new RegexNodes();
-  const file    = process.argv[2];
+  const file = process.argv[2];
   let content;
 
-  try{
-    content = utility.trimShebang( fs.readFileSync(file) );
-  }
-  catch(e){
-    console.error('Redos encountered an error when trying to read from file: '+file);
+  try {
+    content = utility.trimShebang(fs.readFileSync(file));
+  } catch (e) {
+    console.error(`Redos encountered an error when trying to read from file: ${file}`);
     console.error(e);
     process.exit(1);
   }
-  
-  parse(content, function(regNodes){
-    console.log( chalk.blue('Processing:'), chalk.white(file));
+
+  parse(content, (regNodes) => {
+    console.log(chalk.blue('Processing:'), chalk.white(file));
     regNodes.printAll();
   });
-
 }
 
 
