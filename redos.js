@@ -22,18 +22,17 @@ const utility = {
 };
 
 
-function Node(node) {
-  const safe = safeReg(node.regex.pattern);
+function Node(pattern, loc) {
+  const safe = safeReg(pattern);
   const color = safe ? chalk.green : chalk.red;
-  const pattern = node.regex.pattern; // Redundant, but cleaner...
 
   const colorPattern = color(pattern);
   this.pattern = pattern;
-  this.data = { safe, pattern, loc: node.loc };
+  this.data = { safe, pattern };
 
   this.formatLine = function () {
-    const start = node.loc.start;
-    const end = node.loc.end;
+    const start = loc.start;
+    const end = loc.end;
     return `Line[${start.line}:${start.column}->${end.line}:${end.column}]`;
   };
 
@@ -93,9 +92,22 @@ function parse(content, cb) {
   });
 
   traverse(ast, (node) => {
-    // console.log(node);
     if (node.regex && node.regex.pattern) {
-      regexNodes.add(new Node(node));
+      regexNodes.add(new Node(node.regex.pattern, node.loc));
+    } else if (
+      node.type === 'CallExpression' &&
+      node.callee.type === 'MemberExpression' &&
+      node.callee.property.type === 'Identifier' &&
+      (
+        node.callee.property.name === 'match' ||
+        node.callee.property.name === 'search'
+      ) &&
+      node.arguments.length === 1 &&
+      node.arguments[0].type === 'Literal'
+    ) {
+      // Match function calls like foo.match("bar") or foo.search("bar")
+      const stringRegex = node.arguments[0];
+      regexNodes.add(new Node(stringRegex.value, stringRegex.loc));
     }
   });
 
@@ -104,7 +116,7 @@ function parse(content, cb) {
   } else {
     return regexNodes;
   }
-};
+}
 /* eslint-enable consistent-return*/
 
 
