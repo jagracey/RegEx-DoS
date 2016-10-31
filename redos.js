@@ -108,6 +108,19 @@ function parse(content, cb) {
       // Match function calls like foo.match("bar") or foo.search("bar")
       const stringRegex = node.arguments[0];
       regexNodes.add(new Node(stringRegex.value, stringRegex.loc));
+    } else if (
+      (
+        node.type === 'CallExpression' ||
+        node.type === 'NewExpression'
+      ) &&
+      node.callee.type === 'Identifier' &&
+      node.callee.name === 'RegExp' &&
+      node.arguments.length > 0 &&
+      node.arguments[0].type === 'Literal'
+    ) {
+      // Match RegExp("foo")
+      const stringRegex = node.arguments[0];
+      regexNodes.add(new Node(stringRegex.value, stringRegex.loc));
     }
   });
 
