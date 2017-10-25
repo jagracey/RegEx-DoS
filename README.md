@@ -43,6 +43,7 @@
 ```
 
 <br>
+
 # Installing ReDoS
 
 As usual, install with NPM.
